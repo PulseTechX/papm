@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Disallow admin panel
+Disallow: /admin
+
+# Sitemap location
+Sitemap: https://client-theta-coral.vercel.app/sitemap.xml

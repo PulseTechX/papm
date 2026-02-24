@@ -1,0 +1,6 @@
+# server/.gitignore
+node_modules/
+.env
+uploads/
+*.log
+scripts/              # ← Add this line
