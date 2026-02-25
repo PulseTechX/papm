@@ -34,11 +34,11 @@ app.use(cors({
     
     const allowedOrigins = [
       process.env.FRONTEND_URL,
-      'http://localhost:3000',
-      'https://client-theta-coral.vercel.app' // Fixed whitespace here
+      'http://localhost:3000'
     ].filter(Boolean);
     
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('vercel.app')) {
+    // ✅ Allow all DigitalOcean app URLs dynamically
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('ondigitalocean.app')) {
       callback(null, true);
     } else {
       console.log('❌ CORS blocked origin:', origin);
