@@ -17,7 +17,7 @@ const uploadToSpaces = require('./utils/uploadToSpaces');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const BASE_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const BASE_URL = process.env.FRONTEND_URL || 'https://sea-lion-app-33jh5.ondigitalocean.app/';
 
 // ============================================
 // 🔒 SECURITY MIDDLEWARE
@@ -34,10 +34,11 @@ app.use(cors({
     
     const allowedOrigins = [
       process.env.FRONTEND_URL,
-      'http://localhost:3000'
+      'http://localhost:3000',
+      'http://localhost:5000'
     ].filter(Boolean);
     
-    // ✅ Allow all DigitalOcean app URLs dynamically
+    // ✅ Allow all DigitalOcean app URLs
     if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('ondigitalocean.app')) {
       callback(null, true);
     } else {

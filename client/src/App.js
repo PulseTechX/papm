@@ -36,7 +36,7 @@ const PageLoader = () => (
 );
 
 function App() {
-  const BASE_URL = 'https://client-theta-coral.vercel.app';
+  const BASE_URL = 'https://sea-lion-app-33jh5.ondigitalocean.app/';
 
   return (
     <HelmetProvider>

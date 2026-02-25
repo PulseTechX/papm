@@ -9,8 +9,8 @@ import CoffeeButton from '../components/CoffeeButton';
 import AffiliateLink from '../components/AffiliateLink';
 import SaveButton from '../components/SaveButton';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-const BASE_URL = 'https://client-theta-coral.vercel.app';
+const API_URL = process.env.REACT_APP_API_URL || 'https://sea-lion-app-33jh5.ondigitalocean.app/';
+const BASE_URL = 'https://sea-lion-app-33jh5.ondigitalocean.app/';
 
 const PromptDetail = () => {
   const { slug } = useParams();

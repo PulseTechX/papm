@@ -4,8 +4,8 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Calendar, Clock, BookOpen, ArrowRight, Sparkles } from 'lucide-react';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-const BASE_URL = 'https://client-theta-coral.vercel.app';
+const API_URL = process.env.REACT_APP_API_URL || 'https://sea-lion-app-33jh5.ondigitalocean.app/';
+const BASE_URL = 'https://sea-lion-app-33jh5.ondigitalocean.app/';
 
 const BlogList = () => {
   const [blogs, setBlogs] = useState([]);

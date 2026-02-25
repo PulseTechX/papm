@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Trash2, BookOpen, Image, LogOut, Folder, AlertCircle, CheckCircle, Loader, Plus, PlusCircle, Upload, Search, Settings, X } from 'lucide-react';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_URL = process.env.REACT_APP_API_URL || 'https://sea-lion-app-33jh5.ondigitalocean.app/';
 const ADMIN_KEY = 'MySuperSecretPassword1234';
 const SESSION_DURATION = 24 * 60 * 60 * 1000;
 
