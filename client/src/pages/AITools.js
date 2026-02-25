@@ -1526,7 +1526,7 @@ style={{ color: 'var(--text-secondary)' }}
 <span>Back to Gallery</span>
 </Link>
 {/* Floating Search & Filter Dock */}
-<div className="mb-12 sticky top-[72px] z-40 p-4 rounded-2xl shadow-2xl backdrop-blur-xl border" style={{ backgroundColor: 'rgba(26, 26, 37, 0.85)', borderColor: 'var(--border-light)' }}>
+<div className="mb-12 p-4 rounded-2xl shadow-2xl backdrop-blur-xl border" style={{ backgroundColor: 'rgba(26, 26, 37, 0.85)', borderColor: 'var(--border-light)' }}>
 {/* Search Bar */}
 <div className="relative mb-4">
 <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
