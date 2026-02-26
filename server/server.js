@@ -7,17 +7,16 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('mongo-sanitize');
 const multer = require('multer');
-const axios = require('axios'); // Required for DeepSeek API calls
+const axios = require('axios');
 const Prompt = require('./models/Prompt');
 const Blog = require('./models/Blog');
 const Collection = require('./models/Collection');
 
-// ✅ DigitalOcean Spaces upload utility
 const uploadToSpaces = require('./utils/uploadToSpaces');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const BASE_URL = process.env.FRONTEND_URL || 'https://sea-lion-app-33jh5.ondigitalocean.app/';
+const BASE_URL = process.env.FRONTEND_URL || 'https://pickaprompt.com';
 
 // ============================================
 // 🔒 SECURITY MIDDLEWARE
@@ -38,8 +37,7 @@ app.use(cors({
       'http://localhost:5000'
     ].filter(Boolean);
     
-    // ✅ Allow all DigitalOcean app URLs
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('ondigitalocean.app')) {
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('ondigitalocean.app') || origin.includes('pickaprompt.com')) {
       callback(null, true);
     } else {
       console.log('❌ CORS blocked origin:', origin);
@@ -53,25 +51,33 @@ app.use(cors({
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
+// ✅ FIXED: General limiter - high limit for public browsing
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: isDevelopment ? 500 : 100,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: isDevelopment ? 5000 : 2000, // 2000 requests per 15 mins for public
   message: '❌ Too many requests from this IP, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use('/api/', limiter);
 
+// ✅ FIXED: Admin limiter - ONLY applied to POST/PUT/DELETE admin routes
 const adminLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isDevelopment ? 100 : 20,
+  max: isDevelopment ? 500 : 200,
   message: '❌ Too many admin requests, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
 });
-app.use('/api/prompts', adminLimiter);
-app.use('/api/blogs', adminLimiter);
-app.use('/api/collections', adminLimiter);
+
+// ✅ AI limiter - for expensive AI generation routes only
+const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isDevelopment ? 100 : 50,
+  message: '❌ Too many AI requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -87,15 +93,13 @@ app.use((req, res, next) => {
 });
 
 // ============================================
-// 📦 FILE UPLOAD CONFIGURATION (MEMORY STORAGE)
+// 📦 FILE UPLOAD CONFIGURATION
 // ============================================
 
-// ✅ CRITICAL FIX: Files are now kept in RAM (memoryStorage) 
-// so they can be sent directly to DigitalOcean Spaces!
 const upload = multer({ 
   storage: multer.memoryStorage(), 
   limits: { 
-    fileSize: 50 * 1024 * 1024, // 50MB
+    fileSize: 50 * 1024 * 1024,
     files: 1
   },
   fileFilter: (req, file, cb) => {
@@ -167,10 +171,10 @@ app.get('/api/health', (req, res) => {
 });
 
 // ============================================
-// 🧠 AI PROMPT GENERATOR (DeepSeek Integration)
+// 🧠 AI PROMPT GENERATOR
 // ============================================
 
-app.post('/api/generate-prompt', limiter, async (req, res) => {
+app.post('/api/generate-prompt', aiLimiter, async (req, res) => {
   try {
     const {
       mediaType, targetEngine, aspectRatio, subject, action, setting,
@@ -182,7 +186,6 @@ app.post('/api/generate-prompt', limiter, async (req, res) => {
       return res.status(400).json({ message: 'Main subject is required.' });
     }
 
-    // --- ANTI-BLEED SMART FILTERING ---
     const sceneSpecs = { action, setting, era };
     let sceneElementsList = `Subject: ${subject}\n`;
     for (const [key, value] of Object.entries(sceneSpecs)) {
@@ -203,7 +206,6 @@ app.post('/api/generate-prompt', limiter, async (req, res) => {
       }
     }
 
-    // 1. Build advanced, highly descriptive engine rules
     let engineRules = "";
     if (targetEngine === 'Midjourney v6') {
       engineRules = `Write a highly complex, comma-separated string of professional tags. Order: Subject, Setting, Medium, Lighting, Camera, Render. Use advanced cinematic terminology. Append exactly '--ar ${aspectRatio} --v 6.0' to the very end. Do not use full sentences.`;
@@ -215,7 +217,6 @@ app.post('/api/generate-prompt', limiter, async (req, res) => {
       engineRules = `Focus on cinematic motion, physics, and time. Use dense, comma-separated keywords. DO NOT write long paragraphs. End with '4k, 60fps, cinematic motion blur'.`;
     }
 
-    // 2. The Elite System Prompt
     const systemPrompt = `You are an elite AI prompt engineer. Expand the user's basic concepts into EXACTLY ONE highly detailed, professional AI prompt. 
     
     CRITICAL CONSTRAINTS TO PREVENT "TEXT BLEED" AND CRASHES:
@@ -246,7 +247,6 @@ app.post('/api/generate-prompt', limiter, async (req, res) => {
     ${styleMetadataList || 'None specified.'}
     `;
 
-    // 3. Make the API Call to DeepSeek
     const response = await axios.post('https://api.deepseek.com/chat/completions', {
       model: 'deepseek-chat',
       messages: [
@@ -263,7 +263,6 @@ app.post('/api/generate-prompt', limiter, async (req, res) => {
       }
     });
 
-    // 4. Parse the JSON object
     const rawOutput = response.data.choices[0].message.content.trim();
     const jsonString = rawOutput.replace(/```json/g, '').replace(/```/g, '').trim();
     const generatedData = JSON.parse(jsonString);
@@ -280,10 +279,10 @@ app.post('/api/generate-prompt', limiter, async (req, res) => {
 });
 
 // ============================================
-// 🪄 AI PROMPT ENHANCER (DeepSeek Integration)
+// 🪄 AI PROMPT ENHANCER
 // ============================================
 
-app.post('/api/enhance-prompt', limiter, async (req, res) => {
+app.post('/api/enhance-prompt', aiLimiter, async (req, res) => {
   try {
     const { originalPrompt, mediaType, targetEngine, enhancementStyle } = req.body;
 
@@ -291,7 +290,6 @@ app.post('/api/enhance-prompt', limiter, async (req, res) => {
       return res.status(400).json({ message: 'Original prompt is required.' });
     }
 
-    // 1. Build Engine Rules
     let engineRules = "";
     if (targetEngine === 'Midjourney v6') {
       engineRules = `Format as a dense, comma-separated string. Use highly advanced photographic and rendering terminology. End with '--v 6.0'.`;
@@ -303,7 +301,6 @@ app.post('/api/enhance-prompt', limiter, async (req, res) => {
       engineRules = `Focus heavily on motion, camera tracking, fluid dynamics, and temporal changes. End the prompt with '4k, 60fps, cinematic motion blur'. DO NOT write long essays. Keep it dense.`;
     }
 
-    // 2. Build the System Instruction (Anti-Crash Version)
     const systemPrompt = `You are an elite AI prompt engineer. The user has provided a basic, unoptimized prompt. Your objective is to ENHANCE and expand it into a professional, studio-quality prompt.
 
     CRITICAL CONSTRAINTS TO PREVENT CRASHES:
@@ -320,15 +317,14 @@ app.post('/api/enhance-prompt', limiter, async (req, res) => {
       "negativePrompt": "text, typography, logos..."
     }`;
 
-    // 3. Make API Call to DeepSeek
     const response = await axios.post('https://api.deepseek.com/chat/completions', {
       model: 'deepseek-chat',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Please enhance this idea: "${originalPrompt}"` }
       ],
-      temperature: 0.5, // 🔒 ANTI-CRASH: Lowered to prevent rambling
-      max_tokens: 800, // 🔒 ANTI-CRASH: Enforced safety net
+      temperature: 0.5,
+      max_tokens: 800,
       response_format: { type: 'json_object' }
     }, {
       headers: {
@@ -337,7 +333,6 @@ app.post('/api/enhance-prompt', limiter, async (req, res) => {
       }
     });
 
-    // 4. Parse Output
     const rawOutput = response.data.choices[0].message.content.trim();
     const jsonString = rawOutput.replace(/```json/g, '').replace(/```/g, '').trim();
     const generatedData = JSON.parse(jsonString);
@@ -354,14 +349,13 @@ app.post('/api/enhance-prompt', limiter, async (req, res) => {
 });
 
 // ============================================
-// 🛡️ AI NEGATIVE PROMPT GENERATOR (DeepSeek)
+// 🛡️ AI NEGATIVE PROMPT GENERATOR
 // ============================================
 
-app.post('/api/generate-negative-prompt', limiter, async (req, res) => {
+app.post('/api/generate-negative-prompt', aiLimiter, async (req, res) => {
   try {
     const { mediaType, targetEngine, avoidStyle, baseContext, specificBans } = req.body;
 
-    // 1. Build Model/Media specific negative rules
     let negativeRules = "";
     
     if (mediaType === 'video') {
@@ -378,7 +372,6 @@ app.post('/api/generate-negative-prompt', limiter, async (req, res) => {
       negativeRules += ` Format as a concise, readable descriptive sentence of what NOT to include.`;
     }
 
-    // Handle styles to avoid
     let styleBans = "";
     if (avoidStyle !== 'None') {
       if (avoidStyle === 'Cartoon & Anime') styleBans = "anime, cartoon, drawing, illustration, 2d, sketch, cell shaded, comic;";
@@ -388,7 +381,6 @@ app.post('/api/generate-negative-prompt', limiter, async (req, res) => {
       if (avoidStyle === 'Painting / Illustration') styleBans = "painting, oil, brush strokes, watercolor, digital art, stylized;";
     }
 
-    // 2. The System Prompt (Anti-Crash Version)
     const systemPrompt = `You are an elite AI prompt engineer specializing in NEGATIVE PROMPTS. Your only job is to generate a highly detailed, professional negative prompt string to protect the user's AI generation from artifacts and unwanted elements.
 
     CRITICAL CONSTRAINTS TO PREVENT CRASHES:
@@ -405,15 +397,14 @@ app.post('/api/generate-negative-prompt', limiter, async (req, res) => {
       "negativePrompt": "text, watermark, ugly, deformed, [add max 40 more concise words here]"
     }`;
 
-    // 3. Make API Call to DeepSeek
     const response = await axios.post('https://api.deepseek.com/chat/completions', {
       model: 'deepseek-chat',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Generate the ultimate negative prompt for this setup.` }
       ],
-      temperature: 0.5, // 🔒 ANTI-CRASH: Lowered to stop hallucinating endless words
-      max_tokens: 500, // 🔒 ANTI-CRASH: Forced hard stop
+      temperature: 0.5,
+      max_tokens: 500,
       response_format: { type: 'json_object' }
     }, {
       headers: {
@@ -422,7 +413,6 @@ app.post('/api/generate-negative-prompt', limiter, async (req, res) => {
       }
     });
 
-    // 4. Parse Output
     const rawOutput = response.data.choices[0].message.content.trim();
     const jsonString = rawOutput.replace(/```json/g, '').replace(/```/g, '').trim();
     const generatedData = JSON.parse(jsonString);
@@ -458,7 +448,6 @@ app.get('/api/prompts', async (req, res) => {
     if (mediaType && mediaType !== 'All') query.mediaType = mediaType.toLowerCase();
     if (trending === 'true') query.isTrending = true;
     
-    // 🔍 MASSIVE GLOBAL SEARCH: Scans across the entire database
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
@@ -552,7 +541,16 @@ app.get('/api/prompts/slug/:slug', async (req, res) => {
   }
 });
 
-app.post('/api/prompts/:id/copy', async (req, res) => {
+// ✅ FIXED: Copy route has its own reasonable limiter
+const copyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  message: '❌ Too many copy requests',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.post('/api/prompts/:id/copy', copyLimiter, async (req, res) => {
   try {
     const result = await Prompt.findByIdAndUpdate(
       req.params.id,
@@ -567,7 +565,8 @@ app.post('/api/prompts/:id/copy', async (req, res) => {
   }
 });
 
-app.post('/api/prompts', verifyAdmin, upload.single('media'), async (req, res) => {
+// ✅ FIXED: Admin routes use adminLimiter only on write operations
+app.post('/api/prompts', verifyAdmin, adminLimiter, upload.single('media'), async (req, res) => {
   try {
     const { title, promptText, aiModel, industry, topic } = req.body;
     const errors = validateInput(req.body, ['title', 'promptText', 'aiModel', 'industry', 'topic']);
@@ -580,7 +579,6 @@ app.post('/api/prompts', verifyAdmin, upload.single('media'), async (req, res) =
       return res.status(400).json({ message: '❌ No file uploaded' });
     }
 
-    // ✅ NEW: Upload to DigitalOcean Spaces
     const uploadResult = await uploadToSpaces(req.file, 'prompts');
     const mediaUrl = uploadResult.url;
 
@@ -621,7 +619,7 @@ app.post('/api/prompts', verifyAdmin, upload.single('media'), async (req, res) =
   }
 });
 
-app.put('/api/prompts/:id', verifyAdmin, upload.single('media'), async (req, res) => {
+app.put('/api/prompts/:id', verifyAdmin, adminLimiter, upload.single('media'), async (req, res) => {
   try {
     const { title, promptText, aiModel, industry, topic } = req.body;
     
@@ -647,7 +645,6 @@ app.put('/api/prompts/:id', verifyAdmin, upload.single('media'), async (req, res
     };
 
     if (req.file) {
-      // ✅ NEW: Upload to DigitalOcean Spaces
       const uploadResult = await uploadToSpaces(req.file, 'prompts');
       updateData.mediaUrl = uploadResult.url;
     }
@@ -662,7 +659,6 @@ app.put('/api/prompts/:id', verifyAdmin, upload.single('media'), async (req, res
       return res.status(404).json({ message: '❌ Prompt not found' });
     }
 
-    console.log(`✅ Prompt updated and slug generated: ${prompt.slug}`);
     res.json({ message: '✅ Prompt updated!', prompt });
   } catch (error) {
     console.error('❌ Update Prompt Error:', error.message);
@@ -670,7 +666,7 @@ app.put('/api/prompts/:id', verifyAdmin, upload.single('media'), async (req, res
   }
 });
 
-app.delete('/api/prompts/:id', verifyAdmin, async (req, res) => {
+app.delete('/api/prompts/:id', verifyAdmin, adminLimiter, async (req, res) => {
   try {
     const prompt = await Prompt.findById(req.params.id);
     
@@ -717,7 +713,7 @@ app.get('/api/blogs/:slug', async (req, res) => {
   }
 });
 
-app.post('/api/blogs', verifyAdmin, upload.single('coverImage'), async (req, res) => {
+app.post('/api/blogs', verifyAdmin, adminLimiter, upload.single('coverImage'), async (req, res) => {
   try {
     const errors = validateInput(req.body, ['title', 'excerpt', 'content', 'category']);
     if (errors.length > 0) {
@@ -728,7 +724,6 @@ app.post('/api/blogs', verifyAdmin, upload.single('coverImage'), async (req, res
       return res.status(400).json({ message: '❌ Cover image required' });
     }
 
-    // ✅ NEW: Upload to DigitalOcean Spaces
     const uploadResult = await uploadToSpaces(req.file, 'blogs');
     const coverImageUrl = uploadResult.url;
 
@@ -758,7 +753,7 @@ app.post('/api/blogs', verifyAdmin, upload.single('coverImage'), async (req, res
   }
 });
 
-app.put('/api/blogs/:id', verifyAdmin, async (req, res) => {
+app.put('/api/blogs/:id', verifyAdmin, adminLimiter, async (req, res) => {
   try {
     const updates = {
       title: req.body.title?.trim(),
@@ -783,7 +778,7 @@ app.put('/api/blogs/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-app.delete('/api/blogs/:id', verifyAdmin, async (req, res) => {
+app.delete('/api/blogs/:id', verifyAdmin, adminLimiter, async (req, res) => {
   try {
     await Blog.findByIdAndDelete(req.params.id);
     res.json({ message: '✅ Deleted successfully' });
@@ -824,7 +819,7 @@ app.get('/api/collections/:slug', async (req, res) => {
   }
 });
 
-app.post('/api/collections', verifyAdmin, upload.single('coverImage'), async (req, res) => {
+app.post('/api/collections', verifyAdmin, adminLimiter, upload.single('coverImage'), async (req, res) => {
   try {
     const errors = validateInput(req.body, ['title', 'description', 'category']);
     if (errors.length > 0) {
@@ -835,7 +830,6 @@ app.post('/api/collections', verifyAdmin, upload.single('coverImage'), async (re
       return res.status(400).json({ message: '❌ Cover image required' });
     }
 
-    // ✅ NEW: Upload to DigitalOcean Spaces
     const uploadResult = await uploadToSpaces(req.file, 'collections');
     const coverImageUrl = uploadResult.url;
 
@@ -874,7 +868,7 @@ app.post('/api/collections', verifyAdmin, upload.single('coverImage'), async (re
   }
 });
 
-app.put('/api/collections/:id', verifyAdmin, async (req, res) => {
+app.put('/api/collections/:id', verifyAdmin, adminLimiter, async (req, res) => {
   try {
     const updates = {
       title: req.body.title?.trim(),
@@ -892,7 +886,7 @@ app.put('/api/collections/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-app.delete('/api/collections/:id', verifyAdmin, async (req, res) => {
+app.delete('/api/collections/:id', verifyAdmin, adminLimiter, async (req, res) => {
   try {
     await Collection.findByIdAndDelete(req.params.id);
     res.json({ message: '✅ Deleted successfully' });
@@ -902,7 +896,7 @@ app.delete('/api/collections/:id', verifyAdmin, async (req, res) => {
 });
 
 // ============================================
-// 🔍 SEO ROUTES (Sitemap)
+// 🔍 SEO ROUTES
 // ============================================
 
 app.get('/sitemap-prompts.xml', async (req, res) => {
@@ -956,16 +950,25 @@ app.get('/sitemap-blogs.xml', async (req, res) => {
 });
 
 // ============================================
+// ✅ ROOT ROUTE
+// ============================================
+app.get('/', (req, res) => {
+  res.json({ 
+    message: '✅ PickaPrompt API is running!',
+    version: '1.0.0'
+  });
+});
+
+// ============================================
 // 🚀 START SERVER
 // ============================================
 app.listen(PORT, () => {
   console.log('============================================');
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🔒 Security: Helmet + Rate Limit + MongoDB Sanitize + CORS`);
-  console.log(`📊 Rate Limits: ${isDevelopment ? '500 req/15min (Dev)' : '100 req/15min (Prod)'}`);
+  console.log(`📊 Rate Limits: Public: 2000/15min | Admin: 200/15min | AI: 50/15min`);
   console.log(`🌐 Local: http://localhost:${PORT}`);
   console.log(`📊 Health: http://localhost:${PORT}/api/health`);
-  console.log(`📁 Uploads: Memory Storage (DigitalOcean Spaces)`);
   console.log(`🌍 Frontend URL: ${BASE_URL}`);
   console.log('============================================');
 });
@@ -986,17 +989,7 @@ app.use((err, req, res, next) => {
 });
 
 // ============================================
-// ✅ ROOT ROUTE (Added as requested)
-// ============================================
-app.get('/', (req, res) => {
-  res.json({ 
-    message: '✅ PickaPrompt API is running!',
-    version: '1.0.0'
-  });
-});
-
-// ============================================
-// 🛑 404 CATCH-ALL (Must be last)
+// 🛑 404 CATCH-ALL
 // ============================================
 app.use((req, res) => {
   res.status(404).json({ message: '❌ Route not found' });
