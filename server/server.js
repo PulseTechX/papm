@@ -73,7 +73,7 @@ const adminLimiter = rateLimit({
 // ✅ AI limiter - for expensive AI generation routes only
 const aiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isDevelopment ? 100 : 50,
+  max: isDevelopment ? 100 : 10,
   message: '❌ Too many AI requests, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
