@@ -16,6 +16,7 @@ const uploadToSpaces = require('./utils/uploadToSpaces');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://pickaprompt.com';
 const BASE_URL = process.env.FRONTEND_URL || 'https://pickaprompt.com';
 
 // ============================================
@@ -157,6 +158,42 @@ const validateInput = (data, requiredFields) => {
   
   return errors;
 };
+
+// ============================================
+// 🌐 SOCIAL SHARING / SEO ROUTES (For Bots)
+// ============================================
+
+app.get('/prompt/:slug', async (req, res) => {
+  try {
+    const prompt = await Prompt.findOne({ slug: req.params.slug });
+    if (!prompt) return res.redirect(FRONTEND_URL);
+
+    // Return HTML with proper meta tags for bots
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <title>${prompt.title} - PickAPrompt</title>
+  <meta property="og:title" content="${prompt.title}" />
+  <meta property="og:description" content="${prompt.description || prompt.promptText.substring(0, 200)}" />
+  <meta property="og:image" content="${prompt.mediaUrl}" />
+  <meta property="og:url" content="${FRONTEND_URL}/prompt/${prompt.slug}" />
+  <meta property="og:type" content="article" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${prompt.title}" />
+  <meta name="twitter:description" content="${prompt.description || prompt.promptText.substring(0, 200)}" />
+  <meta name="twitter:image" content="${prompt.mediaUrl}" />
+  <meta http-equiv="refresh" content="0;url=${FRONTEND_URL}/prompt/${prompt.slug}" />
+</head>
+<body>
+  <p>Redirecting...</p>
+</body>
+</html>`;
+
+    res.send(html);
+  } catch (error) {
+    res.redirect(FRONTEND_URL);
+  }
+});
 
 // ============================================
 // 📡 API ROUTES
