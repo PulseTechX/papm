@@ -9,8 +9,8 @@ import CoffeeButton from '../components/CoffeeButton';
 import AffiliateLink from '../components/AffiliateLink';
 import SaveButton from '../components/SaveButton';
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://sea-lion-app-33jh5.ondigitalocean.app/';
-const BASE_URL = 'https://sea-lion-app-33jh5.ondigitalocean.app/';
+const API_URL = process.env.REACT_APP_API_URL || 'https://pickaprompt.com';
+const BASE_URL = 'https://pickaprompt.com';
 
 const PromptDetail = () => {
   const { slug } = useParams();
@@ -60,7 +60,7 @@ const PromptDetail = () => {
           ...prev,
           copyCount: (prev.copyCount || 0) + 1
         }));
-        await axios.post(`${API_URL}/api/prompts/${slug}/copy`);
+        await axios.post(`${API_URL}/api/prompts/${prompt._id}/copy`);
       }
       
     } catch (error) {

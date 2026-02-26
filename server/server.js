@@ -552,11 +552,20 @@ const copyLimiter = rateLimit({
 
 app.post('/api/prompts/:id/copy', copyLimiter, async (req, res) => {
   try {
+    // ✅ Validate ID first
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid prompt ID' });
+    }
+
     const result = await Prompt.findByIdAndUpdate(
       req.params.id,
       { $inc: { copyCount: 1 } },
-      { returnDocument: 'after' }
+      { new: true }
     );
+
+    if (!result) {
+      return res.status(404).json({ error: 'Prompt not found' });
+    }
     
     res.json({ message: '✅ Copy count incremented', newCount: result.copyCount });
   } catch (error) {
