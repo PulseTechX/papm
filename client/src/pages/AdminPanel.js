@@ -8,15 +8,36 @@ const SESSION_DURATION = 24 * 60 * 60 * 1000;
 
 const CATEGORY_STRUCTURE = {
   'Media Type': ['Image', 'Video'],
-  'AI Model': ['Midjourney', 'DALL-E 3', 'Stable Diffusion', 'Runway Gen-2', 'Gemini', 'ChatGPT', 'Grok', 'Claude', 'Leonardo AI', 'Nano Banana'],
-  'Industry': ['Real Estate', 'Entertainment', 'Marketing', 'Gaming', 'Fashion', 'Education', 'Healthcare', 'Finance', 'Technology'],
-  'Style': ['Portrait', 'Landscape', 'Logo', 'Abstract', 'Photorealistic', 'Artistic', 'Minimalist', 'Cyberpunk', 'Fantasy']
+  'AI Model': [
+    'Adobe Firefly', 'ChatGPT', 'Claude', 'DALL-E 3', 'Flux', 
+    'Gemini', 'Google Imagen', 'Google Veo', 'Grok', 'Grok Image', 
+    'Grok Video', 'Haiper', 'Ideogram', 'Kling AI', 'Leonardo AI', 
+    'Luma Dream Machine', 'Meta AI', 'Midjourney', 'Nano Banana', 
+    'Nano Banana Pro', 'Pika Labs', 'Runway Gen-2', 'Runway Gen-3', 
+    'Sora', 'Stable Diffusion'
+  ],
+  'Industry': [
+    'Architecture & Interiors', 'Digital Art & Illustration', 'E-commerce & Retail', 
+    'Education', 'Entertainment', 'Fashion', 'Film & Animation', 'Finance', 
+    'Gaming', 'Healthcare', 'Marketing', 'Photography', 'Real Estate', 
+    'Social Media', 'Technology', 'UI/UX & Web Design', 'Writing & Publishing'
+  ],
+  'Style': ['3D Render', 'Abstract', 'Anime', 'Artistic', 'Black & White', 'Cinematic', 
+    'Concept Art', 'Cyberpunk', 'Dark Fantasy', 'Double Exposure', 'Fantasy', 
+    'Flat Design', 'Illustration', 'Isometric', 'Landscape', 'Line Art', 
+    'Logo', 'Macro Photography', 'Minimalist', 'Neon', 'Oil Painting', 
+    'Photorealistic', 'Pixel Art', 'Polaroid', 'Pop Art', 'Portrait', 
+    'Retro/Vintage', 'Sci-Fi', 'Sketch', 'Steampunk', 'Sticker Design', 
+    'Surrealism', 'Typography', 'Vaporwave', 'Vector Art', 'Watercolor']
 };
 
 const COLLECTION_CATEGORIES = [
-  'Logo Design', 'Social Media', 'Real Estate', 'Gaming', 'Fashion',
-  'Portrait', 'Landscape', 'Abstract Art', '3D Render', 'Anime',
-  'Marketing', 'Education', 'Music', 'Video Content', 'Writing'
+  '3D Render', 'Abstract Art', 'Anime', 'Character Design', 'Cinematic Prompts', 
+  'Coloring Books', 'Concept Art', 'Cozy Mystery Writing', 'Education', 'Fashion', 
+  'Gaming', 'Landscape', 'Logo Design', 'Marketing', 'Music', 'Portrait', 
+  'Print-on-Demand', 'Product Photography', 'Real Estate', 'Social Media', 
+  'Stock Photography & Footage', 'T-Shirt Designs', 'UI/UX Elements', 
+  'Video Content', 'Web Development', 'Writing'
 ];
 
 const AdminPanel = () => {
@@ -98,17 +119,13 @@ const AdminPanel = () => {
     }
   }, [authorized]);
 
-  // ✅ FIXED: Handled the new paginated object structure from the backend
   const fetchPrompts = async () => {
     try {
-      // Pass a high limit so the admin panel can see all inventory to manage it
       const res = await axios.get(`${API_URL}/api/prompts?limit=500`);
       
       if (res.data && res.data.prompts) {
-        // New Backend Structure (Paginated)
         setPrompts(res.data.prompts);
       } else if (Array.isArray(res.data)) {
-        // Fallback for old Backend Structure (Raw Array)
         setPrompts(res.data);
       } else {
         setPrompts([]);
@@ -623,7 +640,6 @@ const AdminPanel = () => {
                     <p className="text-lg" style={{ color: 'var(--text-secondary)' }}>Database is empty.</p>
                   </div>
                 ) : (
-                  // ✅ FIXED: ADDED Array.isArray CHECK HERE
                   Array.isArray(prompts) && prompts.map(prompt => (
                     <article key={prompt._id} className="card p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group">
                       <div className="flex items-center gap-4 w-full sm:w-auto flex-1 min-w-0">
@@ -855,7 +871,6 @@ const AdminPanel = () => {
                     <p className="text-lg" style={{ color: 'var(--text-secondary)' }}>No articles published yet.</p>
                   </div>
                 ) : (
-                  // ✅ FIXED: ADDED Array.isArray CHECK HERE
                   Array.isArray(blogs) && blogs.map(blog => (
                     <article key={blog._id} className="card p-3 flex items-center justify-between gap-4 group">
                       <div className="flex items-center gap-4 min-w-0">
@@ -954,7 +969,6 @@ const AdminPanel = () => {
                       {prompts.length === 0 ? (
                         <p className="text-sm col-span-full py-4 text-center" style={{ color: 'var(--text-muted)' }}>You need to create prompts first.</p>
                       ) : (
-                        // ✅ FIXED: ADDED Array.isArray CHECK HERE
                         Array.isArray(prompts) && prompts.map(prompt => {
                           const isSelected = collectionData.prompts.includes(prompt._id);
                           return (
@@ -1032,7 +1046,6 @@ const AdminPanel = () => {
                     <p className="text-lg" style={{ color: 'var(--text-secondary)' }}>No collections built yet.</p>
                   </div>
                 ) : (
-                  // ✅ FIXED: ADDED Array.isArray CHECK HERE
                   Array.isArray(collections) && collections.map(collection => (
                     <article key={collection._id} className="card p-3 flex items-center justify-between gap-4 group">
                       <div className="flex items-center gap-4 min-w-0">

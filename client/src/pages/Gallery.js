@@ -6,23 +6,36 @@ import { Link } from 'react-router-dom';
 import Toast from '../components/Toast';
 import CoffeeButton from '../components/CoffeeButton';
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://sea-lion-app-33jh5.ondigitalocean.app/';
-const BASE_URL = 'https://sea-lion-app-33jh5.ondigitalocean.app/';
+// ✅ FIXED: Removed trailing slashes to prevent 404 double-slash errors!
+const API_URL = process.env.REACT_APP_API_URL || 'https://sea-lion-app-33jh5.ondigitalocean.app';
+const BASE_URL = 'https://sea-lion-app-33jh5.ondigitalocean.app';
 
+// ✅ UPDATED: Massive unified list of Models, Industries, and Styles
 const CATEGORY_STRUCTURE = {
   'All': ['All'],
   'Media Type': ['Image', 'Video'],
   'AI Model': [
-    'Midjourney', 'DALL-E 3', 'Stable Diffusion', 'Runway Gen-2', 
-    'Gemini', 'ChatGPT', 'Grok', 'Claude', 'Leonardo AI', 'Nano Banana'
+    'Adobe Firefly', 'ChatGPT', 'Claude', 'DALL-E 3', 'Flux', 
+    'Gemini', 'Google Imagen', 'Google Veo', 'Grok', 'Grok Image', 
+    'Grok Video', 'Haiper', 'Ideogram', 'Kling AI', 'Leonardo AI', 
+    'Luma Dream Machine', 'Meta AI', 'Midjourney', 'Nano Banana', 
+    'Nano Banana Pro', 'Pika Labs', 'Runway Gen-2', 'Runway Gen-3', 
+    'Sora', 'Stable Diffusion'
   ],
   'Industry': [
-    'Real Estate', 'Entertainment', 'Marketing', 'Gaming', 
-    'Fashion', 'Education', 'Healthcare', 'Finance', 'Technology'
+    'Architecture & Interiors', 'Digital Art & Illustration', 'E-commerce & Retail', 
+    'Education', 'Entertainment', 'Fashion', 'Film & Animation', 'Finance', 
+    'Gaming', 'Healthcare', 'Marketing', 'Photography', 'Real Estate', 
+    'Social Media', 'Technology', 'UI/UX & Web Design', 'Writing & Publishing'
   ],
   'Style': [
-    'Portrait', 'Landscape', 'Logo', 'Abstract', 'Photorealistic', 
-    'Artistic', 'Minimalist', 'Cyberpunk', 'Fantasy'
+    '3D Render', 'Abstract', 'Anime', 'Artistic', 'Black & White', 'Cinematic', 
+    'Concept Art', 'Cyberpunk', 'Dark Fantasy', 'Double Exposure', 'Fantasy', 
+    'Flat Design', 'Illustration', 'Isometric', 'Landscape', 'Line Art', 
+    'Logo', 'Macro Photography', 'Minimalist', 'Neon', 'Oil Painting', 
+    'Photorealistic', 'Pixel Art', 'Polaroid', 'Pop Art', 'Portrait', 
+    'Retro/Vintage', 'Sci-Fi', 'Sketch', 'Steampunk', 'Sticker Design', 
+    'Surrealism', 'Typography', 'Vaporwave', 'Vector Art', 'Watercolor'
   ]
 };
 
